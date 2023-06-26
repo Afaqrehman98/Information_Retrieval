@@ -1,5 +1,6 @@
 import os
 import re
+from porter_stemmer import PorterStemmer
 
 
 def stops_words_removal(text, stop_words):
@@ -16,10 +17,13 @@ def stops_words_removal(text, stop_words):
     return cleaned_text
 
 
-def boolean_query_search(query, content, use_stopwords=False):
+def boolean_query_search(query, content, use_stopwords=False, use_stemming=False):
     # Splitting the query as this one is for boolean model then later on checking if all query terms that are passed
     # are present in the content by doing Performing boolean retrieval if it is present true will be returned
     # otherwise false
+    stemmer = PorterStemmer()
+    if use_stemming:
+        query = stemmer.word_stemming(query)
 
     query_to_be_searched = query.lower().split()
     if use_stopwords:
@@ -27,7 +31,8 @@ def boolean_query_search(query, content, use_stopwords=False):
             stopwords = [word.strip() for word in stopwords_file]
         query_to_be_searched = stops_words_removal(query_to_be_searched, stopwords)
 
-    content_terms = content.lower().split()
+    content_terms = [stemmer.word_stemming(word) if use_stemming else word for word in content.lower().split()]
+
     for term in query_to_be_searched:
         if term not in content_terms:
             return False
@@ -91,13 +96,14 @@ class DocumentProcessor:
             text_without_stop_words = stops_words_removal(text_of_fable, list_of_stop_words)
 
             file_name_of_after_removing_stop_words = f"{specific_fable_number}_{specific_fable_name}.txt"
-            filepath_without_stop_words = os.path.join(sub_folder_without_stop_words, file_name_of_after_removing_stop_words)
+            filepath_without_stop_words = os.path.join(sub_folder_without_stop_words,
+                                                       file_name_of_after_removing_stop_words)
 
             if not os.path.exists(filepath_without_stop_words):
                 with open(filepath_without_stop_words, 'w') as f:
                     f.write(text_without_stop_words)
 
-    def linear_search_mode(self, query, use_stopwords=False):
+    def linear_search_mode(self, query, use_stopwords=False, use_stemming=False):
         # First we select the folder based on the parameters whether we want to search in collection_no_stopwords or
         # collection_original then get the directory to search for the query later we initialize an empty list to
         # append the items or content that matches then we do the linear search we iterate from every file and find
@@ -115,7 +121,7 @@ class DocumentProcessor:
             filepath = os.path.join(search_directory, filename)
             with open(filepath, 'r') as file:
                 content = file.read()
-                if boolean_query_search(query, content, use_stopwords):
+                if boolean_query_search(query, content, use_stopwords, use_stemming):
                     files_that_matches_query.append(filename)
 
         if len(files_that_matches_query) == 0:

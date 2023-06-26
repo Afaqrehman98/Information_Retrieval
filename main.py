@@ -11,6 +11,7 @@ def main():
     parser.add_argument('-model', metavar='value', help='Model option')
     parser.add_argument('-search-mode', metavar='value', help='Search mode option')
     parser.add_argument('-documents', metavar='value', help='Documents option')
+    parser.add_argument('-stemming', metavar='value', help='Stemming option')
     parser.add_argument('-query', metavar='value', help='Query option')
 
     args = parser.parse_args()
@@ -35,12 +36,20 @@ def main():
             model_for_search = second_args.model
             mode_of_search = second_args.search_mode
             folder_to_be_searched = second_args.documents
+            stemming = second_args.stemming
             query_to_be_searched = second_args.query
             print(f"Processing search: {search_query_command}")
             document_processor = DocumentProcessor()
-            if model_for_search == 'bool' and mode_of_search == 'linear' and folder_to_be_searched in ['original', 'no_stopwords']:
+            if model_for_search == 'bool' and mode_of_search == 'linear' and folder_to_be_searched in ['original',
+                                                                                                       'no_stopwords']:
                 use_stopwords = True if folder_to_be_searched == 'no_stopwords' else False
-                document_processor.linear_search_mode(query=query_to_be_searched, use_stopwords=use_stopwords)
+                if stemming is None or not stemming:
+                    use_stemming = False
+                else:
+                    use_stemming = True
+
+                document_processor.linear_search_mode(query=query_to_be_searched, use_stopwords=use_stopwords,
+                                                      use_stemming=use_stemming)
             else:
                 print("Invalid parameters. kindly check the document in the directory to make a correct command")
 
