@@ -2,12 +2,4 @@ python main.py -extract-collection aesopa10.txt
 
 python main.py -model "bool" -search-mode "linear" -documents "original" -query "lion"
 
-python main.py -model "bool" -search-mode "inverted" -documents "original" -query "peck|pearls"
-
-Use Cases:
-
-peck|pearls
-
-prize&treasure
-
--lion
+python main.py -model "bool" -search-mode "linear" -documents "original" -stemming "true" -query "strutting"
