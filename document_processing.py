@@ -1,6 +1,7 @@
 import os
 import re
 from porter_stemmer import PorterStemmer
+from precision_recall_calculator import PrecisionRecallCalculator
 
 
 def stops_words_removal(text, stop_words):
@@ -116,7 +117,6 @@ class DocumentProcessor:
         search_directory = os.path.join(self.script_directory, sub_folder)
 
         files_that_matches_query = []
-
         for filename in os.listdir(search_directory):
             filepath = os.path.join(search_directory, filename)
             with open(filepath, 'r') as file:
@@ -129,3 +129,4 @@ class DocumentProcessor:
         else:
             for filename in files_that_matches_query:
                 print(filename)
+
