@@ -3,6 +3,7 @@ import re
 from porter_stemmer import PorterStemmer
 import time
 from precision_recall_calculator import PrecisionRecallCalculator
+import time
 
 
 def stops_words_removal(text, stop_words):

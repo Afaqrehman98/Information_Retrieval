@@ -1,6 +1,8 @@
 import argparse
 import os
 import shlex
+import os
+import time
 
 from document_processing import DocumentProcessor
 from boolean_search import BooleanSearch
@@ -71,7 +73,7 @@ def main():
     else:
         print("Invalid command. kindly check the document in the directory to make a correct command")
 
-    # This is the main function 
+    # This is the main function
     # def boolean_retrieval_mode(self, query, use_stopwords=False):
 
     # sub_folder = 'collection_no_stopwords'
