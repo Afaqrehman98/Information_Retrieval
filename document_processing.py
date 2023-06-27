@@ -1,6 +1,11 @@
 import os
 import re
+
+from porter_stemmer import PorterStemmer
+
 import time
+
+from precision_recall_calculator import PrecisionRecallCalculator
 
 
 def stops_words_removal(text, stop_words):
@@ -17,18 +22,20 @@ def stops_words_removal(text, stop_words):
     return cleaned_text
 
 
-def boolean_query_search(query, content, use_stopwords=False):
+def boolean_query_search(query, content, use_stopwords=False, use_stemming=False):
     # Splitting the query as this one is for boolean model then later on checking if all query terms that are passed
     # are present in the content by doing Performing boolean retrieval if it is present true will be returned
     # otherwise false
-
+    stemmer = PorterStemmer()
+    if use_stemming:
+        query = stemmer.word_stemming(query)
     query_to_be_searched = query.lower().split()
     if use_stopwords:
         with open('englishST.txt', 'r') as stopwords_file:
             stopwords = [word.strip() for word in stopwords_file]
         query_to_be_searched = stops_words_removal(query_to_be_searched, stopwords)
 
-    content_terms = content.lower().split()
+    content_terms = [stemmer.word_stemming(word) if use_stemming else word for word in content.lower().split()]
     for term in query_to_be_searched:
         if term not in content_terms:
             return False
@@ -92,18 +99,19 @@ class DocumentProcessor:
             text_without_stop_words = stops_words_removal(text_of_fable, list_of_stop_words)
 
             file_name_of_after_removing_stop_words = f"{specific_fable_number}_{specific_fable_name}.txt"
-            filepath_without_stop_words = os.path.join(sub_folder_without_stop_words, file_name_of_after_removing_stop_words)
+            filepath_without_stop_words = os.path.join(sub_folder_without_stop_words,
+                                                       file_name_of_after_removing_stop_words)
 
             if not os.path.exists(filepath_without_stop_words):
                 with open(filepath_without_stop_words, 'w') as f:
                     f.write(text_without_stop_words)
 
-    def linear_search_mode(self, query, use_stopwords=False):
+    def linear_search_mode(self, query, use_stopwords=False, use_stemming=False):
         # First we select the folder based on the parameters whether we want to search in collection_no_stopwords or
         # collection_original then get the directory to search for the query later we initialize an empty list to
         # append the items or content that matches then we do the linear search we iterate from every file and find
         # out the query in those files then print those fileNames which contains those query
-
+        start_time = time.time()
         if use_stopwords:
             sub_folder = 'collection_no_stopwords'
         else:
@@ -116,154 +124,22 @@ class DocumentProcessor:
             filepath = os.path.join(search_directory, filename)
             with open(filepath, 'r') as file:
                 content = file.read()
-                if boolean_query_search(query, content, use_stopwords):
+                if boolean_query_search(query, content, use_stopwords, use_stemming):
                     files_that_matches_query.append(filename)
 
+        end_time = time.time()
+        elapsed_time = round((end_time - start_time) * 1000, 2)
         if len(files_that_matches_query) == 0:
             print("No files found")
         else:
             for filename in files_that_matches_query:
                 print(filename)
+                print(elapsed_time)
 
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        ground_truth_file = os.path.join(script_directory, 'groundtruth.txt')
+        precision_recall_calculator = PrecisionRecallCalculator(ground_truth_file)
+        precision, recall = precision_recall_calculator.calculate_precision_recall(query, files_that_matches_query)
 
-    # Methods For Boolean Retrival Method Starts Here
-    
-    # Create an inverted index to store the terms and their corresponding document IDs. 
-    # Iterate over the text files in the "collection" folder, read the contents of each file, 
-    # tokenize the text into terms, and build the inverted index.
-    def inverted_index(folder_path):
-        inverted_index = {}
-        inverted_index["_all_documents"] = {}  # Add _all_documents entry
-        
-        for filename in os.listdir(folder_path):
-            # print("filname",filename)
-            file_path = os.path.join(folder_path, filename)
-            # print("file_path",file_path)
-            with open(file_path, 'r') as file:
-                document = file.read()
-                # print("document",document)
-                terms = document.split()  # Split text into terms
-                # print("term",terms)
+        print(f"P={precision},R={recall},T={elapsed_time}ms")
 
-                for term in terms:
-                    if term not in inverted_index:
-                        inverted_index[term] = {}
-                    if filename not in inverted_index[term]:
-                        inverted_index[term][filename] = 0
-                    inverted_index[term][filename] += 1
-
-                  # Add the document name to the _all_documents entry
-                inverted_index["_all_documents"][filename] = len(terms)  # Store the document length
-
-        return inverted_index
-    
-    
-
-    # Implement functions to process Boolean queries and retrieve the relevant documents 
-    # based on the inverted index
-    # AND Logic
-    def boolean_and(self,  terms, inverted_index):
-        if len(terms) == 0:
-            return set()
-
-        terms.remove("&")    
-        terms = [term.lower() for term in terms]  # Convert terms to lowercase
-    
-        result = set(inverted_index.get(terms[0], {}).keys())
-
-        for term in terms[1:]:
-            result = result.intersection(inverted_index.get(term, {}).keys())
-
-        return result
-    
-    # OR Logic
-    def boolean_or(self, terms, inverted_index):
-        if len(terms) == 0:
-            return set()
-        
-        terms.remove("|")    
-        terms = [term.lower() for term in terms]  # Convert terms to lowercase
-        
-        result = set()
-        for term in terms:
-            result = result.union(inverted_index.get(term, {}).keys())
-        
-        return result
-    # NOT Logic
-    def boolean_not(self, term, inverted_index, total_documents):
-        if len(term) == 0:
-            return set()
-        
-        term = term.lower()
-
-        term_documents = set(inverted_index.get(term, {}).keys())
-        all_documents = set(inverted_index["_all_documents"].keys())  # All document names
-
-        result = all_documents - term_documents
-
-        sorted_result = sorted(result, key=lambda x: int(x[:2]))  # Sort filenames based on first two digits
-
-        return sorted_result
-
-   
-    def split_string_by_operators(string, operators):
-        split_list = []
-        current_word = ""
-
-        for char in string:
-            if char in operators:
-                if current_word:
-                    split_list.append(current_word)
-                    current_word = ""
-                split_list.append(char)
-            else:
-                current_word += char
-
-        if current_word:
-            split_list.append(current_word)
-
-        return split_list
-
-   # input Boolean queries and display the relevant documents.
-    def search_documents(self, query, inverted_index, total_documents):
-        
-        start_time = time.time()
-        
-        operators = ["&","|","-"]
-        terms = self.split_string_by_operators(query, operators)
-        
-        if '&' in terms:
-            result = self.boolean_and(terms, inverted_index)
-        elif '|' in terms:
-            result = self.boolean_or(terms, inverted_index)
-        elif '-' in terms:
-            result = self.boolean_not(terms[1], inverted_index, total_documents)
-        else:
-            result = inverted_index.get(terms[0], set())
-        
-        end_time = time.time()
-        elapsed_time = round((end_time - start_time) * 1000, 2)  # Convert to milliseconds and round to 2 decimal places
-
-        # Append the query processing time to the results list
-        result.append(f"T={elapsed_time}ms")
-
-        return result
-
-    # This is the main function 
-    def boolean_retrieval_mode(self, query, use_stopwords=False):
-
-        if use_stopwords:
-            sub_folder = 'collection_no_stopwords'
-        else:
-            sub_folder = 'collection_original'
-
-        inverted_index = inverted_index(sub_folder)
-        total_documents = len(os.listdir(sub_folder))
-
-        query = input("Enter a Boolean query: ")
-
-        result = self.search_documents(query, inverted_index, total_documents)
-
-        print("Relevant Documents:")
-        for doc_id in result:
-            print(doc_id)
