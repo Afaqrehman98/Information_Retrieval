@@ -6,6 +6,8 @@ python main.py -model "bool" -search-mode "linear" -documents "original" -stemmi
 
 python main.py -model "bool" -search-mode "inverted" -documents "original" -query "excuse&seize"
 
+python main.py -model "vector" -documents "original" -query "lion"
+
 Use Cases:
 
 peck|pearls

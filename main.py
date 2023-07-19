@@ -4,6 +4,7 @@ import shlex
 
 from boolean_search import BooleanSearch
 from document_processing import DocumentProcessor
+from vector_space import VectorSpaceModel
 
 
 def main():
@@ -42,9 +43,18 @@ def main():
             stemming = second_args.stemming
             print(f"Processing search: {search_query_command}")
             document_processor = DocumentProcessor()
+            if model_for_search == 'vector' and folder_to_be_searched in ['original', 'no_stopwords']:
+                if folder_to_be_searched == 'original':
+                    sub_folder = 'collection_original'
+                else:
+                    sub_folder = 'collection_no_stopwords'
+                vector_space = VectorSpaceModel(folder_path=sub_folder)
+                vector_space.data_initialization()
+                results = vector_space.search_using_vector_space_model(query_to_be_searched)
+                print(results)
 
-            if model_for_search == 'bool' and mode_of_search == 'linear' and folder_to_be_searched in ['original',
-                                                                                                       'no_stopwords']:
+            elif model_for_search == 'bool' and mode_of_search == 'linear' and folder_to_be_searched in ['original',
+                                                                                                         'no_stopwords']:
 
                 use_stopwords = True if folder_to_be_searched == 'no_stopwords' else False
                 if stemming is None or not stemming:
